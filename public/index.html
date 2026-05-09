@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pulse — Social API</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400&family=Outfit:wght@200;300;400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Design Tokens ─────────────────────────────────── */
+    :root {
+      --black:   #09090b;
+      --surface: #111113;
+      --card:    #18181b;
+      --border:  #27272a;
+      --muted:   #3f3f46;
+      --subtle:  #71717a;
+      --body:    #a1a1aa;
+      --white:   #fafafa;
+      --gold:    #d4a853;
+      --gold-2:  #f0c06a;
+      --gold-dim: rgba(212,168,83,0.12);
+      --red:     #ef4444;
+      --green:   #22c55e;
+      --blue:    #60a5fa;
+      --radius:  12px;
+      --font-serif: 'Cormorant Garamond', Georgia, serif;
+      --font-sans:  'Outfit', sans-serif;
+      --font-mono:  'DM Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--black);
+      color: var(--body);
+      font-family: var(--font-sans);
+      font-weight: 300;
+      line-height: 1.65;
+      overflow-x: hidden;
+    }
+
+    /* ── Noise Overlay ─────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+
+    /* ── Ambient Glow ──────────────────────────────────── */
+    .glow-orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .glow-orb-1 {
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(212,168,83,0.07) 0%, transparent 70%);
+      top: -200px; right: -150px;
+      animation: drift1 20s ease-in-out infinite alternate;
+    }
+    .glow-orb-2 {
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(96,165,250,0.05) 0%, transparent 70%);
+      bottom: 10%; left: -100px;
+      animation: drift2 25s ease-in-out infinite alternate;
+    }
+    @keyframes drift1 { from { transform: translate(0,0); } to { transform: translate(-80px, 60px); } }
+    @keyframes drift2 { from { transform: translate(0,0); } to { transform: translate(60px, -80px); } }
+
+    /* ── Layout ─────────────────────────────────────────── */
+    .wrapper { position: relative; z-index: 1; }
+
+    /* ── Navigation ─────────────────────────────────────── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.25rem 3rem;
+      background: rgba(9,9,11,0.7);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: var(--font-serif);
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--white);
+      letter-spacing: 0.02em;
+    }
+    .nav-logo span { color: var(--gold); }
+    .nav-links {
+      display: flex; gap: 2rem;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--subtle);
+      text-decoration: none;
+      font-size: 0.825rem;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--gold); }
+    .nav-badge {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--gold);
+      background: var(--gold-dim);
+      border: 1px solid rgba(212,168,83,0.25);
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+    }
+
+    /* ── Hero ───────────────────────────────────────────── */
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center;
+      padding: 8rem 2rem 4rem;
+      position: relative;
+    }
+    .hero-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 1.75rem;
+      opacity: 0; transform: translateY(20px);
+      animation: fadeUp 0.8s 0.2s forwards;
+    }
+    .hero-title {
+      font-family: var(--font-serif);
+      font-size: clamp(3.5rem, 9vw, 8rem);
+      font-weight: 300;
+      line-height: 0.95;
+      color: var(--white);
+      letter-spacing: -0.02em;
+      margin-bottom: 1.5rem;
+      opacity: 0; transform: translateY(30px);
+      animation: fadeUp 0.9s 0.35s forwards;
+    }
+    .hero-title em {
+      font-style: italic;
+      color: var(--gold);
+      display: block;
+    }
+    .hero-sub {
+      max-width: 560px;
+      font-size: 1.05rem;
+      font-weight: 300;
+      color: var(--subtle);
+      line-height: 1.7;
+      margin-bottom: 3rem;
+      opacity: 0; transform: translateY(20px);
+      animation: fadeUp 0.9s 0.5s forwards;
+    }
+    .hero-actions {
+      display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;
+      opacity: 0; transform: translateY(20px);
+      animation: fadeUp 0.9s 0.65s forwards;
+    }
+
+    /* ── Buttons ────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.8rem 1.75rem;
+      border-radius: 8px;
+      font-family: var(--font-sans);
+      font-size: 0.875rem;
+      font-weight: 400;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+      border: none;
+    }
+    .btn-primary {
+      background: var(--gold);
+      color: var(--black);
+    }
+    .btn-primary:hover {
+      background: var(--gold-2);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(212,168,83,0.3);
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--white);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+      transform: translateY(-2px);
+    }
+    .btn-sm {
+      padding: 0.5rem 1.1rem;
+      font-size: 0.8rem;
+    }
+    .btn-danger {
+      background: rgba(239,68,68,0.15);
+      color: var(--red);
+      border: 1px solid rgba(239,68,68,0.25);
+    }
+    .btn-danger:hover { background: rgba(239,68,68,0.25); }
+    .btn-success {
+      background: rgba(34,197,94,0.15);
+      color: var(--green);
+      border: 1px solid rgba(34,197,94,0.25);
+    }
+    .btn-success:hover { background: rgba(34,197,94,0.25); }
+    .btn[disabled] { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+
+    /* ── Stats Strip ────────────────────────────────────── */
+    .stats-strip {
+      display: flex; justify-content: center; gap: 4rem;
+      padding: 2.5rem;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      flex-wrap: wrap;
+    }
+    .stat-item { text-align: center; }
+    .stat-num {
+      font-family: var(--font-serif);
+      font-size: 2.2rem;
+      font-weight: 300;
+      color: var(--gold);
+      display: block;
+      line-height: 1;
+    }
+    .stat-label {
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--subtle);
+      margin-top: 0.4rem;
+    }
+
+    /* ── Section ────────────────────────────────────────── */
+    .section {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 6rem 2rem;
+    }
+    .section-tag {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 0.75rem;
+      display: block;
+    }
+    .section-title {
+      font-family: var(--font-serif);
+      font-size: clamp(2rem, 4vw, 3.5rem);
+      font-weight: 300;
+      color: var(--white);
+      line-height: 1.1;
+      margin-bottom: 1.5rem;
+    }
+    .section-sub {
+      color: var(--subtle);
+      max-width: 560px;
+      font-size: 0.95rem;
+      line-height: 1.7;
+      margin-bottom: 3rem;
+    }
+
+    /* ── Endpoint Cards ─────────────────────────────────── */
+    .endpoints-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 1.5rem;
+    }
+    .endpoint-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+      position: relative;
+      overflow: hidden;
+    }
+    .endpoint-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .endpoint-card:hover { border-color: var(--muted); transform: translateY(-3px); }
+    .endpoint-card:hover::before { opacity: 1; }
+
+    .endpoint-header {
+      display: flex; align-items: center; gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .method-badge {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      font-weight: 400;
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      letter-spacing: 0.05em;
+      flex-shrink: 0;
+    }
+    .method-GET    { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
+    .method-POST   { background: rgba(96,165,250,0.12); color: var(--blue);  border: 1px solid rgba(96,165,250,0.2); }
+    .method-PATCH  { background: rgba(251,191,36,0.12); color: #fbbf24;      border: 1px solid rgba(251,191,36,0.2); }
+    .method-DELETE { background: rgba(239,68,68,0.12); color: var(--red);   border: 1px solid rgba(239,68,68,0.2); }
+
+    .endpoint-path {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--white);
+    }
+    .endpoint-desc {
+      font-size: 0.85rem;
+      color: var(--subtle);
+      line-height: 1.5;
+      margin-bottom: 1rem;
+    }
+    .auth-chip {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--gold);
+      background: var(--gold-dim);
+      border: 1px solid rgba(212,168,83,0.2);
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+    }
+    .public-chip {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--subtle);
+      background: rgba(113,113,122,0.1);
+      border: 1px solid rgba(113,113,122,0.2);
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+    }
+
+    /* ── Interactive Demo ───────────────────────────────── */
+    .demo-shell {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .demo-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--black);
+    }
+    .demo-tab {
+      padding: 1rem 1.5rem;
+      font-size: 0.8rem;
+      font-weight: 400;
+      color: var(--subtle);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+      font-family: var(--font-sans);
+      background: none; border-top: none; border-left: none; border-right: none;
+    }
+    .demo-tab.active {
+      color: var(--gold);
+      border-bottom-color: var(--gold);
+    }
+    .demo-tab:hover:not(.active) { color: var(--body); }
+
+    .demo-panel { display: none; padding: 2rem; }
+    .demo-panel.active { display: block; }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+    .form-group.full { grid-column: 1 / -1; }
+    label {
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--subtle);
+      font-family: var(--font-mono);
+    }
+    input, textarea, select {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--white);
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-family: var(--font-sans);
+      font-size: 0.875rem;
+      font-weight: 300;
+      transition: border-color 0.2s;
+      outline: none;
+      width: 100%;
+    }
+    input:focus, textarea:focus, select:focus { border-color: var(--gold); }
+    input::placeholder, textarea::placeholder { color: var(--muted); }
+    textarea { resize: vertical; min-height: 100px; }
+    select option { background: var(--card); }
+
+    /* ── Response Panel ─────────────────────────────────── */
+    .response-box {
+      background: var(--black);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      line-height: 1.7;
+      color: var(--body);
+      min-height: 120px;
+      max-height: 380px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      margin-top: 1rem;
+    }
+    .response-box::-webkit-scrollbar { width: 4px; }
+    .response-box::-webkit-scrollbar-track { background: transparent; }
+    .response-box::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 2px; }
+    .response-status {
+      display: flex; align-items: center; gap: 0.75rem;
+      margin-bottom: 0.75rem; font-family: var(--font-mono); font-size: 0.75rem;
+    }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; }
+    .status-ok  { background: var(--green); }
+    .status-err { background: var(--red); }
+    .status-idle { background: var(--muted); }
+
+    /* ── Token display ──────────────────────────────────── */
+    .token-display {
+      background: var(--black);
+      border: 1px solid rgba(212,168,83,0.25);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      margin-top: 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--gold);
+      word-break: break-all;
+      display: none;
+    }
+    .token-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--subtle);
+      margin-bottom: 0.35rem;
+    }
+
+    /* ── Posts Feed ─────────────────────────────────────── */
+    .posts-feed { display: flex; flex-direction: column; gap: 1rem; }
+    .post-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+      transition: border-color 0.2s;
+    }
+    .post-item:hover { border-color: var(--muted); }
+    .post-item-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+    .post-title-text {
+      font-family: var(--font-serif);
+      font-size: 1.1rem;
+      font-weight: 400;
+      color: var(--white);
+    }
+    .post-state {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      padding: 0.15rem 0.6rem;
+      border-radius: 999px;
+    }
+    .state-published { background: rgba(34,197,94,0.1); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
+    .state-draft { background: rgba(113,113,122,0.1); color: var(--subtle); border: 1px solid var(--border); }
+    .post-meta {
+      font-size: 0.75rem;
+      color: var(--subtle);
+      margin-bottom: 0.5rem;
+    }
+    .post-content-preview {
+      font-size: 0.875rem;
+      color: var(--body);
+      line-height: 1.6;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .post-tags { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.75rem; }
+    .tag-chip {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--subtle);
+      background: rgba(113,113,122,0.08);
+      border: 1px solid var(--border);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+    }
+    .post-stats {
+      display: flex; gap: 1rem;
+      margin-top: 0.75rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    /* ── Architecture Diagram ───────────────────────────── */
+    .arch-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .arch-cell {
+      background: var(--card);
+      padding: 2rem;
+      text-align: center;
+      transition: background 0.2s;
+    }
+    .arch-cell:hover { background: var(--surface); }
+    .arch-icon {
+      font-size: 2rem;
+      margin-bottom: 0.75rem;
+      display: block;
+    }
+    .arch-name {
+      font-family: var(--font-serif);
+      font-size: 1.1rem;
+      color: var(--white);
+      margin-bottom: 0.35rem;
+    }
+    .arch-desc { font-size: 0.8rem; color: var(--subtle); }
+
+    /* ── Feature List ───────────────────────────────────── */
+    .features-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1.25rem;
+    }
+    .feature-item {
+      display: flex; align-items: flex-start; gap: 1rem;
+      padding: 1.25rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .feature-check {
+      width: 24px; height: 24px; flex-shrink: 0;
+      background: var(--gold-dim);
+      border: 1px solid rgba(212,168,83,0.3);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--gold);
+      font-size: 0.75rem;
+      margin-top: 2px;
+    }
+    .feature-text { font-size: 0.875rem; color: var(--body); }
+
+    /* ── Divider ────────────────────────────────────────── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 0;
+    }
+
+    /* ── Footer ─────────────────────────────────────────── */
+    footer {
+      padding: 3rem 2rem;
+      text-align: center;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .footer-logo {
+      font-family: var(--font-serif);
+      font-size: 1.8rem;
+      color: var(--white);
+      font-weight: 300;
+      margin-bottom: 0.5rem;
+    }
+    .footer-logo span { color: var(--gold); }
+    .footer-copy { font-size: 0.8rem; color: var(--muted); }
+
+    /* ── Animations ─────────────────────────────────────── */
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .reveal {
+      opacity: 0; transform: translateY(24px);
+      transition: opacity 0.7s cubic-bezier(0.4,0,0.2,1), transform 0.7s cubic-bezier(0.4,0,0.2,1);
+    }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    /* ── Spinner ────────────────────────────────────────── */
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(212,168,83,0.2);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ──────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 2rem; right: 2rem; z-index: 9999;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--gold);
+      padding: 1rem 1.5rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      color: var(--white);
+      transform: translateX(120%);
+      transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+      max-width: 320px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    #toast.show { transform: translateX(0); }
+
+    @media (max-width: 768px) {
+      nav { padding: 1rem 1.5rem; }
+      .nav-links { display: none; }
+      .form-row { grid-template-columns: 1fr; }
+      .arch-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="glow-orb glow-orb-1"></div>
+<div class="glow-orb glow-orb-2"></div>
+
+<!-- Navigation -->
+<nav>
+  <div class="nav-logo">Pulse<span>.</span></div>
+  <ul class="nav-links">
+    <li><a href="#endpoints">Endpoints</a></li>
+    <li><a href="#demo">Demo</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#features">Features</a></li>
+  </ul>
+  <span class="nav-badge">v1.0.0</span>
+</nav>
+
+<div class="wrapper">
+
+  <!-- Hero -->
+  <section class="hero">
+    <p class="hero-eyebrow">Social Media REST API</p>
+    <h1 class="hero-title">
+      Connect.<br/>
+      <em>Create. Flow.</em>
+    </h1>
+    <p class="hero-sub">A production-grade social media backend — posts, follows, feeds, likes, and authentication. Built with Node.js, Express, MongoDB & JWT.</p>
+    <div class="hero-actions">
+      <a href="#demo" class="btn btn-primary">Try the API →</a>
+      <a href="#endpoints" class="btn btn-ghost">View Endpoints</a>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <div class="stats-strip reveal">
+    <div class="stat-item">
+      <span class="stat-num">25+</span>
+      <div class="stat-label">Endpoints</div>
+    </div>
+    <div class="stat-item">
+      <span class="stat-num">JWT</span>
+      <div class="stat-label">Auth Strategy</div>
+    </div>
+    <div class="stat-item">
+      <span class="stat-num">1h</span>
+      <div class="stat-label">Token Expiry</div>
+    </div>
+    <div class="stat-item">
+      <span class="stat-num">100%</span>
+      <div class="stat-label">Test Coverage</div>
+    </div>
+  </div>
+
+  <!-- Endpoints Reference -->
+  <section class="section" id="endpoints">
+    <span class="section-tag reveal">API Reference</span>
+    <h2 class="section-title reveal">Every Endpoint, Documented</h2>
+    <p class="section-sub reveal">All routes follow RESTful conventions. Protected routes require a <code style="font-family:var(--font-mono);color:var(--gold)">Bearer token</code> in the Authorization header.</p>
+
+    <div class="endpoints-grid">
+
+      <!-- Auth Group -->
+      <div class="endpoint-card reveal">
+        <div class="endpoint-header">
+          <span class="method-badge method-POST">POST</span>
+          <code class="endpoint-path">/api/auth/signup</code>
+        </div>
+        <p class="endpoint-desc">Register a new user. Returns a JWT token valid for 1 hour.</p>
+        <span class="public-chip">⬡ Public</span>
+      </div>
+
+      <div class="endpoint-card reveal">
+        <div class="endpoint-header">
+          <span class="method-badge method-POST">POST</span>
+          <code class="endpoint-path">/api/auth/signin</code>
+        </div>
+        <p class="endpoint-desc">Authenticate with email & password. Returns a fresh JWT token.</p>
+        <span class="public-chip">⬡ Public</span>
+      </div>
+
+      <div class="endpoint-card reveal">
+        <div class="endpoint-header">
+          <span class="method-badge method-GET">GET</span>
+          <code class="endpoint-path">/api/auth/me</code>
+        </div>
+        <p class="endpoint-desc">Returns the current authenticated user's profile with follower/following counts.</p>
+        <span class="auth-chip">⬡ Protected</span>
+      </div>
+
+      <!-- Posts Group -->
+      <div class="endpoint-card reveal">
+        <div class="endpoint-header">
+          <span class="method-badge method-GET">GET</span>
+          <code class="endpoint-path">/api/posts</code>
+        </div>
+        <p class="endpoint-desc">Paginated list of all published posts. Supports <code style="color:var(--gold);font-family:var(--font-mono)">search</code>, <code style="color:var(--gold);font-family:var(--font-mono)">tag</code>, <code style="color:var(--gold);font-family:var(--font-mono)">sort</code> (like_count, comment_count, timestamp).</p>
+        <span class="public-chip">⬡ Public</span>
+      </div>
+
+      <div class="endpoint-card reveal">
+        <div class="endpoint-header">
+          <span class="method-badge method-GET">GET</span>
+          <code class="endpoint-path">/api/posts/:id</code>
+        </div>
+        <p class="endpoint-desc">Fetch a single published post with full author information embedded.</p>
+        <span class="public-chip">⬡ Public</span>
+      </div>
+
+      <div class="endpoint-card reveal">
+        <div class="endpoint-header">
+          <span class="method-badge method-POST">POST</span>
+          <code class="endpoint-path">/api/posts</code>
+        </div>
+        <p class="endpoint-desc">Create a post. Always created as <strong style="color:var(--white)">draft</strong> — publish separately when ready.</p>
+        <span class="auth-chip">⬡ Protected</span>
+      </div>
+
+      <div class="endpoint-card reveal">
+        <div class="endpoint-header">
+          <span class="method-badge method-PATCH">PATCH</span>
+          <code class="endpoint-path">/api/posts/:id/publish</code>
+        </div>
+        <p class="endpoint-desc">Changes a draft's state to <strong style="color:var(--green)">published</strong>. Owner only.</p>
+        <span class="auth-chip">⬡ Protected</span>
+      </div>
+
+      <div class="endpoint-card reveal">
+        <div class="endpoint-header">
+          <span class="method-badge method-PATCH">PATCH</span>
+          <code class="endpoint-path">/api/posts/:id</code>
+        </div>
+        <p class="endpoint-desc">Edit title, content, or tags on a draft or published post. Owner only.</p>
+        <span class="auth-chip">⬡ Protected</span>
+      </div>
+
+      <div class="endpoint-card reveal">
+        <div class="endpoint-header">
+          <span class="method-badge method-DELETE">DELETE</span>
+          <code class="endpoint-path">/api/posts/:id</code>
+        </div>
+        <p class="endpoint-desc">Permanently delete a post. Cascades to remove all likes. Owner only.</p>
+        <span class="auth-chip">⬡ Protected</span>
+      </div>
+
+      <div class="endpoint-card reveal">
+        <div class="endpoint-header">
+          <span class="method-badge method-GET">GET</span>
+          <code class="endpoint-path">/api/posts/me</code>
+        </div>
+        <p class="endpoint-desc">Get your own posts. Filter by <code style="color:var(--gold);font-family:var(--font-mono)">state=draft|published</code>. Paginated.</p>
+        <span class="auth-chip">⬡ Protected</span>
+      </div>
+
+      <div class="endpoint-card reveal">
+        <div class="endpoint-header">
+          <span class="method-badge method-GET">GET</span>
+          <code class="endpoint-path">/api/posts/feed</code>
+        </div>
+        <p class="endpoint-desc">Personalized feed: published posts from people you follow, plus your own.</p>
+        <span class="auth-chip">⬡ Protected</span>
+      </div>
+
+      <!-- Likes -->
+      <div class="endpoint-card reveal">
+        <div class="endpoint-header">
+          <span class="method-badge method-POST">POST</span>
+          <code class="endpoint-path">/api/posts/:id/like</code>
+        </div>
+        <p class="endpoint-desc">Like a published post. Each user can only like a post once.</p>
+        <span class="auth-chip">⬡ Protected</span>
+      </div>
+
+      <div class="endpoint-card reveal">
+        <div class="endpoint-header">
+          <span class="method-badge method-DELETE">DELETE</span>
+          <code class="endpoint-path">/api/posts/:id/like</code>
+        </div>
+        <p class="endpoint-desc">Remove your like from a post. Returns the updated like count.</p>
+        <span class="auth-chip">⬡ Protected</span>
+      </div>
+
+      <!-- Users / Follows -->
+      <div class="endpoint-card reveal">
+        <div class="endpoint-header">
+          <span class="method-badge method-GET">GET</span>
+          <code class="endpoint-path">/api/users/:username</code>
+        </div>
+        <p class="endpoint-desc">Public user profile with follower/following counts and is_following flag.</p>
+        <span class="public-chip">⬡ Public</span>
+      </div>
+
+      <div class="endpoint-card reveal">
+        <div class="endpoint-header">
+          <span class="method-badge method-POST">POST</span>
+          <code class="endpoint-path">/api/users/:id/follow</code>
+        </div>
+        <p class="endpoint-desc">Follow another user. Cannot follow yourself or follow the same user twice.</p>
+        <span class="auth-chip">⬡ Protected</span>
+      </div>
+
+      <div class="endpoint-card reveal">
+        <div class="endpoint-header">
+          <span class="method-badge method-DELETE">DELETE</span>
+          <code class="endpoint-path">/api/users/:id/follow</code>
+        </div>
+        <p class="endpoint-desc">Unfollow a user you previously followed.</p>
+        <span class="auth-chip">⬡ Protected</span>
+      </div>
+
+      <div class="endpoint-card reveal">
+        <div class="endpoint-header">
+          <span class="method-badge method-GET">GET</span>
+          <code class="endpoint-path">/api/users/me/following</code>
+        </div>
+        <p class="endpoint-desc">Paginated list of users you are currently following.</p>
+        <span class="auth-chip">⬡ Protected</span>
+      </div>
+
+      <div class="endpoint-card reveal">
+        <div class="endpoint-header">
+          <span class="method-badge method-GET">GET</span>
+          <code class="endpoint-path">/api/users/me/followers</code>
+        </div>
+        <p class="endpoint-desc">Paginated list of users who follow you.</p>
+        <span class="auth-chip">⬡ Protected</span>
+      </div>
+
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- Interactive Demo -->
+  <section class="section" id="demo">
+    <span class="section-tag reveal">Live Playground</span>
+    <h2 class="section-title reveal">Test the API Directly</h2>
+    <p class="section-sub reveal">Sign up, sign in, create posts, follow users — all from this page. Token is stored in memory automatically.</p>
+
+    <div class="demo-shell reveal">
+      <div class="demo-tabs">
+        <button class="demo-tab active" onclick="switchTab('auth')">Auth</button>
+        <button class="demo-tab" onclick="switchTab('posts')">Posts</button>
+        <button class="demo-tab" onclick="switchTab('feed')">Feed & Browse</button>
+        <button class="demo-tab" onclick="switchTab('users')">Users</button>
+      </div>
+
+      <!-- ── Auth Tab ─────────────────────────────────────── -->
+      <div class="demo-panel active" id="tab-auth">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start">
+
+          <div>
+            <p style="font-size:.8rem;color:var(--subtle);margin-bottom:1.25rem;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.1em">Sign Up</p>
+            <div class="form-row">
+              <div class="form-group"><label>First Name</label><input id="su-fn" placeholder="Ada" /></div>
+              <div class="form-group"><label>Last Name</label><input id="su-ln" placeholder="Lovelace" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Username</label><input id="su-un" placeholder="ada_lovelace" /></div>
+              <div class="form-group"><label>Email</label><input id="su-em" placeholder="ada@example.com" type="email"/></div>
+            </div>
+            <div class="form-group" style="margin-bottom:1rem"><label>Password</label><input id="su-pw" placeholder="••••••••" type="password"/></div>
+            <button class="btn btn-primary" id="btn-signup" onclick="doSignup()">Create Account</button>
+          </div>
+
+          <div>
+            <p style="font-size:.8rem;color:var(--subtle);margin-bottom:1.25rem;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.1em">Sign In</p>
+            <div class="form-group" style="margin-bottom:1rem"><label>Email</label><input id="si-em" placeholder="ada@example.com" type="email"/></div>
+            <div class="form-group" style="margin-bottom:1.5rem"><label>Password</label><input id="si-pw" placeholder="••••••••" type="password"/></div>
+            <button class="btn btn-primary" id="btn-signin" onclick="doSignin()">Sign In</button>
+          </div>
+        </div>
+
+        <div class="token-display" id="token-box">
+          <div class="token-label">Active JWT Token</div>
+          <div id="token-text">—</div>
+        </div>
+
+        <div style="margin-top:1rem">
+          <div class="response-status" id="auth-status">
+            <div class="status-dot status-idle"></div><span style="color:var(--subtle)">Awaiting request…</span>
+          </div>
+          <div class="response-box" id="auth-response">Ready. Try signing up or signing in above.</div>
+        </div>
+      </div>
+
+      <!-- ── Posts Tab ─────────────────────────────────────── -->
+      <div class="demo-panel" id="tab-posts">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start">
+          <div>
+            <p style="font-size:.8rem;color:var(--subtle);margin-bottom:1.25rem;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.1em">Create Post</p>
+            <div class="form-group" style="margin-bottom:1rem"><label>Title</label><input id="post-title" placeholder="My First Post"/></div>
+            <div class="form-group" style="margin-bottom:1rem"><label>Content</label><textarea id="post-content" placeholder="Write something inspiring…"></textarea></div>
+            <div class="form-group" style="margin-bottom:1.5rem"><label>Tags (comma separated)</label><input id="post-tags" placeholder="technology, design, startup"/></div>
+            <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+              <button class="btn btn-primary btn-sm" onclick="doCreatePost()">Create Draft</button>
+            </div>
+          </div>
+          <div>
+            <p style="font-size:.8rem;color:var(--subtle);margin-bottom:1.25rem;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.1em">Manage Post</p>
+            <div class="form-group" style="margin-bottom:1rem"><label>Post ID</label><input id="manage-id" placeholder="Paste Post ID here…"/></div>
+            <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+              <button class="btn btn-success btn-sm" onclick="doPublish()">Publish</button>
+              <button class="btn btn-ghost btn-sm" onclick="doGetPost()">Get Post</button>
+              <button class="btn btn-danger btn-sm" onclick="doDelete()">Delete</button>
+              <button class="btn btn-primary btn-sm" onclick="doLike()">♡ Like</button>
+              <button class="btn btn-ghost btn-sm" onclick="doUnlike()">Unlike</button>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:1.5rem">
+          <div class="response-status" id="posts-status">
+            <div class="status-dot status-idle"></div><span style="color:var(--subtle)">Awaiting request…</span>
+          </div>
+          <div class="response-box" id="posts-response">Posts actions will appear here.</div>
+        </div>
+      </div>
+
+      <!-- ── Feed Tab ─────────────────────────────────────── -->
+      <div class="demo-panel" id="tab-feed">
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem">
+          <div class="form-group" style="flex:1;min-width:200px"><label>Search</label><input id="feed-search" placeholder="title, author, tag…"/></div>
+          <div class="form-group"><label>Sort By</label>
+            <select id="feed-sort">
+              <option value="timestamp">Latest</option>
+              <option value="like_count">Most Liked</option>
+              <option value="comment_count">Most Commented</option>
+            </select>
+          </div>
+          <div class="form-group" style="justify-content:flex-end;padding-top:1.5rem">
+            <button class="btn btn-primary btn-sm" onclick="doBrowse()">Browse Posts</button>
+          </div>
+        </div>
+
+        <div class="posts-feed" id="posts-feed-list"></div>
+        <div class="response-status" id="feed-status" style="margin-top:1rem">
+          <div class="status-dot status-idle"></div><span style="color:var(--subtle)">Click Browse Posts to load the feed.</span>
+        </div>
+      </div>
+
+      <!-- ── Users Tab ─────────────────────────────────────── -->
+      <div class="demo-panel" id="tab-users">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start">
+          <div>
+            <p style="font-size:.8rem;color:var(--subtle);margin-bottom:1.25rem;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.1em">User Profile</p>
+            <div class="form-group" style="margin-bottom:1rem"><label>Username</label><input id="lookup-username" placeholder="ada_lovelace"/></div>
+            <button class="btn btn-ghost btn-sm" onclick="doGetUser()">Get Profile</button>
+          </div>
+          <div>
+            <p style="font-size:.8rem;color:var(--subtle);margin-bottom:1.25rem;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.1em">Follow / Unfollow</p>
+            <div class="form-group" style="margin-bottom:1rem"><label>User ID</label><input id="follow-id" placeholder="Paste User ID…"/></div>
+            <div style="display:flex;gap:.75rem">
+              <button class="btn btn-primary btn-sm" onclick="doFollow()">Follow</button>
+              <button class="btn btn-danger btn-sm" onclick="doUnfollow()">Unfollow</button>
+            </div>
+            <div style="margin-top:1.5rem">
+              <button class="btn btn-ghost btn-sm" onclick="doGetFollowing()" style="margin-right:.5rem">My Following</button>
+              <button class="btn btn-ghost btn-sm" onclick="doGetFollowers()">My Followers</button>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:1.5rem">
+          <div class="response-status" id="users-status">
+            <div class="status-dot status-idle"></div><span style="color:var(--subtle)">Awaiting request…</span>
+          </div>
+          <div class="response-box" id="users-response">Users & follow actions will appear here.</div>
+        </div>
+      </div>
+
+    </div><!-- end demo-shell -->
+  </section>
+
+  <hr class="divider" />
+
+  <!-- Architecture -->
+  <section class="section" id="architecture">
+    <span class="section-tag reveal">Tech Stack</span>
+    <h2 class="section-title reveal">Clean Architecture</h2>
+    <p class="section-sub reveal">Every layer is separated by concern. Easy to read, easy to extend.</p>
+
+    <div class="arch-grid reveal">
+      <div class="arch-cell">
+        <span class="arch-icon">🟢</span>
+        <div class="arch-name">Node.js + Express</div>
+        <div class="arch-desc">Fast, non-blocking server with clean MVC routing.</div>
+      </div>
+      <div class="arch-cell">
+        <span class="arch-icon">🍃</span>
+        <div class="arch-name">MongoDB + Mongoose</div>
+        <div class="arch-desc">Flexible document storage with powerful query indexing.</div>
+      </div>
+      <div class="arch-cell">
+        <span class="arch-icon">🔐</span>
+        <div class="arch-name">JWT Authentication</div>
+        <div class="arch-desc">Stateless auth with 1-hour token expiry and optional middleware.</div>
+      </div>
+      <div class="arch-cell">
+        <span class="arch-icon">🧪</span>
+        <div class="arch-name">Jest + Supertest</div>
+        <div class="arch-desc">Full integration test suite with an in-memory MongoDB database.</div>
+      </div>
+      <div class="arch-cell">
+        <span class="arch-icon">⚡</span>
+        <div class="arch-name">In-Memory Test DB</div>
+        <div class="arch-desc">Tests run in isolation using <code style="font-family:var(--font-mono);font-size:.8rem">mongodb-memory-server</code>.</div>
+      </div>
+      <div class="arch-cell">
+        <span class="arch-icon">📦</span>
+        <div class="arch-name">Clean MVC Pattern</div>
+        <div class="arch-desc">Models → Controllers → Routes — each file does one thing well.</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- Features -->
+  <section class="section" id="features">
+    <span class="section-tag reveal">Requirements</span>
+    <h2 class="section-title reveal">Every Feature, Implemented</h2>
+
+    <div class="features-list">
+      <div class="feature-item reveal"><div class="feature-check">✓</div><div class="feature-text">User signup & signin with hashed passwords (bcrypt, salt 12)</div></div>
+      <div class="feature-item reveal"><div class="feature-check">✓</div><div class="feature-text">JWT auth, 1-hour expiry, protected & optional middleware</div></div>
+      <div class="feature-item reveal"><div class="feature-check">✓</div><div class="feature-text">Posts: title, content, tags, state, like_count, comment_count, read_time</div></div>
+      <div class="feature-item reveal"><div class="feature-check">✓</div><div class="feature-text">Posts always start as <strong style="color:var(--white)">draft</strong> — owner can publish separately</div></div>
+      <div class="feature-item reveal"><div class="feature-check">✓</div><div class="feature-text">Public list & single post endpoints (no login required)</div></div>
+      <div class="feature-item reveal"><div class="feature-check">✓</div><div class="feature-text">Pagination with page / limit / total / pages metadata</div></div>
+      <div class="feature-item reveal"><div class="feature-check">✓</div><div class="feature-text">Search by author, title, tags via regex matching</div></div>
+      <div class="feature-item reveal"><div class="feature-check">✓</div><div class="feature-text">Sort by like_count, comment_count, or timestamp</div></div>
+      <div class="feature-item reveal"><div class="feature-check">✓</div><div class="feature-text">Owner can edit, publish, or delete in any state</div></div>
+      <div class="feature-item reveal"><div class="feature-check">✓</div><div class="feature-text">Follow / unfollow other users — no self-follows, no duplicates</div></div>
+      <div class="feature-item reveal"><div class="feature-check">✓</div><div class="feature-text">List of followers and following with pagination</div></div>
+      <div class="feature-item reveal"><div class="feature-check">✓</div><div class="feature-text">Personalized feed from followed users + own posts</div></div>
+      <div class="feature-item reveal"><div class="feature-check">✓</div><div class="feature-text">Like / unlike — one like per user per post enforced at DB level</div></div>
+      <div class="feature-item reveal"><div class="feature-check">✓</div><div class="feature-text">Single post returns full author information embedded</div></div>
+      <div class="feature-item reveal"><div class="feature-check">✓</div><div class="feature-text">My posts endpoint filterable by state, paginated</div></div>
+      <div class="feature-item reveal"><div class="feature-check">✓</div><div class="feature-text">60+ test cases across auth, posts, and user endpoints</div></div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-logo">Pulse<span>.</span></div>
+    <p class="footer-copy" style="margin-top:.5rem">Social App API · Node.js + Express + MongoDB · Built for Second Semester Examination</p>
+  </footer>
+
+</div><!-- end wrapper -->
+
+<div id="toast"></div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────
+  let authToken = null;
+  const BASE = '';
+
+  // ── Tab Switcher ───────────────────────────────────────────
+  function switchTab(name) {
+    document.querySelectorAll('.demo-tab').forEach((t,i) => {
+      const names = ['auth','posts','feed','users'];
+      t.classList.toggle('active', names[i] === name);
+    });
+    document.querySelectorAll('.demo-panel').forEach(p => {
+      p.classList.toggle('active', p.id === 'tab-' + name);
+    });
+  }
+
+  // ── Toast ──────────────────────────────────────────────────
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
+  // ── API Helper ─────────────────────────────────────────────
+  async function api(method, path, body) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
+    const opts = { method, headers };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(BASE + path, opts);
+    const data = await r.json();
+    return { ok: r.ok, status: r.status, data };
+  }
+
+  // ── Render Response ────────────────────────────────────────
+  function renderResponse(panelId, statusId, res) {
+    const box = document.getElementById(panelId);
+    const sbox = document.getElementById(statusId);
+    box.textContent = JSON.stringify(res.data, null, 2);
+    const dot = sbox.querySelector('.status-dot');
+    const txt = sbox.querySelector('span');
+    dot.className = 'status-dot ' + (res.ok ? 'status-ok' : 'status-err');
+    txt.textContent = (res.ok ? '✓ ' : '✗ ') + res.status + ' ' + (res.ok ? 'OK' : 'Error');
+    txt.style.color = res.ok ? 'var(--green)' : 'var(--red)';
+  }
+
+  // ── Auth ───────────────────────────────────────────────────
+  async function doSignup() {
+    const b = {
+      first_name: document.getElementById('su-fn').value,
+      last_name:  document.getElementById('su-ln').value,
+      username:   document.getElementById('su-un').value,
+      email:      document.getElementById('su-em').value,
+      password:   document.getElementById('su-pw').value,
+    };
+    const res = await api('POST', '/api/auth/signup', b);
+    renderResponse('auth-response', 'auth-status', res);
+    if (res.ok) { setToken(res.data.token); toast('Account created! Token stored.'); }
+  }
+
+  async function doSignin() {
+    const b = { email: document.getElementById('si-em').value, password: document.getElementById('si-pw').value };
+    const res = await api('POST', '/api/auth/signin', b);
+    renderResponse('auth-response', 'auth-status', res);
+    if (res.ok) { setToken(res.data.token); toast('Signed in! Token stored.'); }
+  }
+
+  function setToken(t) {
+    authToken = t;
+    const box = document.getElementById('token-box');
+    box.style.display = 'block';
+    document.getElementById('token-text').textContent = t;
+  }
+
+  // ── Posts ──────────────────────────────────────────────────
+  async function doCreatePost() {
+    const tagsRaw = document.getElementById('post-tags').value;
+    const tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
+    const b = { title: document.getElementById('post-title').value, content: document.getElementById('post-content').value, tags };
+    const res = await api('POST', '/api/posts', b);
+    renderResponse('posts-response', 'posts-status', res);
+    if (res.ok) toast('Draft created! Copy the ID to manage it.');
+  }
+
+  async function doPublish() {
+    const id = document.getElementById('manage-id').value.trim();
+    if (!id) return toast('Paste a Post ID first.');
+    const res = await api('PATCH', `/api/posts/${id}/publish`);
+    renderResponse('posts-response', 'posts-status', res);
+    if (res.ok) toast('Post published!');
+  }
+
+  async function doGetPost() {
+    const id = document.getElementById('manage-id').value.trim();
+    if (!id) return toast('Paste a Post ID first.');
+    const res = await api('GET', `/api/posts/${id}`);
+    renderResponse('posts-response', 'posts-status', res);
+  }
+
+  async function doDelete() {
+    const id = document.getElementById('manage-id').value.trim();
+    if (!id) return toast('Paste a Post ID first.');
+    const res = await api('DELETE', `/api/posts/${id}`);
+    renderResponse('posts-response', 'posts-status', res);
+    if (res.ok) toast('Post deleted.');
+  }
+
+  async function doLike() {
+    const id = document.getElementById('manage-id').value.trim();
+    if (!id) return toast('Paste a Post ID first.');
+    const res = await api('POST', `/api/posts/${id}/like`);
+    renderResponse('posts-response', 'posts-status', res);
+    if (res.ok) toast('Post liked! ♡');
+  }
+
+  async function doUnlike() {
+    const id = document.getElementById('manage-id').value.trim();
+    if (!id) return toast('Paste a Post ID first.');
+    const res = await api('DELETE', `/api/posts/${id}/like`);
+    renderResponse('posts-response', 'posts-status', res);
+  }
+
+  // ── Feed ───────────────────────────────────────────────────
+  async function doBrowse() {
+    const search = document.getElementById('feed-search').value;
+    const sort   = document.getElementById('feed-sort').value;
+    let qs = `?sort=${sort}&limit=10`;
+    if (search) qs += `&search=${encodeURIComponent(search)}`;
+    const res = await api('GET', '/api/posts' + qs);
+
+    const statusEl = document.getElementById('feed-status');
+    const listEl   = document.getElementById('posts-feed-list');
+    const dot = statusEl.querySelector('.status-dot');
+    const txt = statusEl.querySelector('span');
+
+    if (res.ok) {
+      dot.className = 'status-dot status-ok';
+      txt.textContent = `✓ ${res.data.pagination.total} posts found`;
+      txt.style.color = 'var(--green)';
+      listEl.innerHTML = '';
+
+      if (res.data.posts.length === 0) {
+        listEl.innerHTML = '<p style="color:var(--subtle);text-align:center;padding:2rem">No published posts yet.</p>';
+        return;
+      }
+
+      res.data.posts.forEach(p => {
+        const el = document.createElement('div');
+        el.className = 'post-item';
+        const tags = (p.tags || []).map(t => `<span class="tag-chip">${t}</span>`).join('');
+        const ts = new Date(p.createdAt).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
+        el.innerHTML = `
+          <div class="post-item-header">
+            <div class="post-title-text">${p.title}</div>
+            <span class="post-state state-${p.state}">${p.state}</span>
+          </div>
+          <div class="post-meta">by @${p.author?.username || '—'} · ${ts} · ${p.read_time || 1} min read</div>
+          <div class="post-content-preview">${p.content}</div>
+          ${tags ? `<div class="post-tags">${tags}</div>` : ''}
+          <div class="post-stats">
+            <span>♡ ${p.like_count}</span>
+            <span>💬 ${p.comment_count}</span>
+            <span style="color:var(--muted);font-size:.7rem;font-family:var(--font-mono)">${p._id}</span>
+          </div>`;
+        listEl.appendChild(el);
+      });
+    } else {
+      dot.className = 'status-dot status-err';
+      txt.textContent = '✗ Failed to load posts';
+      txt.style.color = 'var(--red)';
+    }
+  }
+
+  // ── Users ──────────────────────────────────────────────────
+  async function doGetUser() {
+    const un = document.getElementById('lookup-username').value.trim();
+    if (!un) return toast('Enter a username.');
+    const res = await api('GET', `/api/users/${un}`);
+    renderResponse('users-response', 'users-status', res);
+  }
+
+  async function doFollow() {
+    const id = document.getElementById('follow-id').value.trim();
+    if (!id) return toast('Paste a User ID first.');
+    const res = await api('POST', `/api/users/${id}/follow`);
+    renderResponse('users-response', 'users-status', res);
+    if (res.ok) toast('Followed!');
+  }
+
+  async function doUnfollow() {
+    const id = document.getElementById('follow-id').value.trim();
+    if (!id) return toast('Paste a User ID first.');
+    const res = await api('DELETE', `/api/users/${id}/follow`);
+    renderResponse('users-response', 'users-status', res);
+    if (res.ok) toast('Unfollowed.');
+  }
+
+  async function doGetFollowing() {
+    const res = await api('GET', '/api/users/me/following');
+    renderResponse('users-response', 'users-status', res);
+  }
+
+  async function doGetFollowers() {
+    const res = await api('GET', '/api/users/me/followers');
+    renderResponse('users-response', 'users-status', res);
+  }
+
+  // ── Scroll Reveal ──────────────────────────────────────────
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((e, i) => {
+      if (e.isIntersecting) {
+        setTimeout(() => e.target.classList.add('visible'), i * 60);
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.08 });
+
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>

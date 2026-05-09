@@ -1,0 +1,32 @@
+{
+  "name": "social-app-api",
+  "version": "1.0.0",
+  "description": "A full-featured Social Media REST API with JWT authentication, posts, follows, likes, and feed.",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "test": "jest --runInBand --detectOpenHandles --forceExit --testTimeout=30000"
+  },
+  "keywords": ["social-media", "api", "nodejs", "express", "mongodb"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.4.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "mongodb-memory-server": "^10.0.0",
+    "supertest": "^7.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/tests/**/*.test.js"],
+    "testTimeout": 30000
+  }
+}
