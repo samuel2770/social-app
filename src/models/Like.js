@@ -13,12 +13,9 @@ const likeSchema = new mongoose.Schema(
       required: true,
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-// ─── Compound unique index: one like per user/post pair ─────
 likeSchema.index({ user: 1, post: 1 }, { unique: true });
 
 module.exports = mongoose.model('Like', likeSchema);

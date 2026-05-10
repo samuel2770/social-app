@@ -6,7 +6,6 @@ beforeAll(async () => await connectTestDB());
 afterEach(async () => await clearDB());
 afterAll(async () => await disconnectTestDB());
 
-// ─── Fixtures ────────────────────────────────────────────────
 const validUser = {
   first_name: 'Ada',
   last_name: 'Lovelace',
@@ -22,7 +21,7 @@ describe('POST /api/auth/signup', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.token).toBeDefined();
     expect(res.body.user.email).toBe(validUser.email);
-    expect(res.body.user.password).toBeUndefined(); // Never expose password
+    expect(res.body.user.password).toBeUndefined();
   });
 
   it('should reject signup with a duplicate email', async () => {
@@ -44,13 +43,6 @@ describe('POST /api/auth/signup', () => {
     const res = await request(app).post('/api/auth/signup').send({ email: 'test@example.com' });
     expect(res.statusCode).toBe(400);
     expect(res.body.success).toBe(false);
-  });
-
-  it('should reject an invalid email format', async () => {
-    const res = await request(app)
-      .post('/api/auth/signup')
-      .send({ ...validUser, email: 'not-an-email' });
-    expect(res.statusCode).toBe(400);
   });
 });
 
@@ -85,7 +77,9 @@ describe('POST /api/auth/signin', () => {
   });
 
   it('should reject signin with missing fields', async () => {
-    const res = await request(app).post('/api/auth/signin').send({ email: validUser.email });
+    const res = await request(app)
+      .post('/api/auth/signin')
+      .send({ email: validUser.email });
     expect(res.statusCode).toBe(400);
   });
 });

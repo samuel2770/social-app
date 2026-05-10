@@ -13,12 +13,9 @@ const followSchema = new mongoose.Schema(
       required: true,
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-// ─── Compound unique index: one follow record per pair ──────
 followSchema.index({ follower: 1, following: 1 }, { unique: true });
 
 module.exports = mongoose.model('Follow', followSchema);

@@ -1,15 +1,27 @@
-const express = require('express');
-const router = express.Router();
-const { signup, signin, getMe } = require('../controllers/authController');
-const { protect } = require('../middleware/auth');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-// POST /api/auth/signup  – Register a new user
-router.post('/signup', signup);
+const decodeToken = async (req) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select('-password');
+    return user || null;
+  } catch { return null; }
+};
 
-// POST /api/auth/signin  – Login and receive JWT
-router.post('/signin', signin);
+const protect = async (req, res, next) => {
+  const user = await decodeToken(req);
+  if (!user) return res.status(401).json({ success: false, message: 'Authentication required.' });
+  req.user = user;
+  next();
+};
 
-// GET  /api/auth/me      – Get current user profile (protected)
-router.get('/me', protect, getMe);
+const optionalAuth = async (req, res, next) => {
+  req.user = await decodeToken(req);
+  next();
+};
 
-module.exports = router;
+module.exports = { protect, optionalAuth };
